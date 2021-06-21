@@ -1,0 +1,4 @@
+mini_store_python
+*.DS_Store
+*.pyc
+__pycache__
