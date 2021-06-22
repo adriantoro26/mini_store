@@ -6,12 +6,23 @@ from django.db.models.fields.related import OneToOneField
 # Create your models here.
 class User(AbstractBaseUser):
    name = models.CharField(max_length=255, null=False)
-   lastLname = models.CharField(max_length=255, null=False)
+   lastname = models.CharField(max_length=255, null=False)
    email = models.EmailField(max_length=255, unique=True, null=False)
+   password = models.CharField(max_length=255)
    is_seller = models.BooleanField(default=False) # Default: Buyer.
 
+   USERNAME_FIELD = 'email'
+   REQUIRED_FIELDS = ['name']
+
+   def get_full_name(self):
+      return self.name 
+
+   def get_short_name(self):
+      return self.name 
+   
    def __str__(self):
-      return self.email
+      # Convert the object to a string.
+      return self.email      
 class Cart(models.Model):
    buyer_id = models.OneToOneField(User, on_delete= models.CASCADE)
 class Orders(models.Model):
