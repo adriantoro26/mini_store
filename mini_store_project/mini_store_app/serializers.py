@@ -32,3 +32,8 @@ class LoginSerialiazer(TokenObtainPairSerializer):
       token['name'] = user.name
       token['email'] = user.email
       return token
+class ProductSerializer(serializers.ModelSerializer):
+   class Meta:
+      model = models.Products
+      fields = '__all__'
+      extra_kwargs = {'creator_id':{'read_only':True}}

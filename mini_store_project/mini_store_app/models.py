@@ -1,3 +1,4 @@
+import decimal
 from django.db import models
 # Base Djando user model.
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
@@ -53,19 +54,23 @@ class User(AbstractBaseUser):
    def __str__(self):
       # Convert the object to a string.
       return self.email      
-class Cart(models.Model):
-   buyer_id = models.OneToOneField(User, on_delete= models.CASCADE)
-class Orders(models.Model):
-   buyer_id = models.ForeignKey(User, on_delete= models.CASCADE) # Many to one relationship.
 class Products(models.Model):
    title = models.CharField(max_length=20, null=False)
    description = models.TextField(null=False)
-   price = models.FloatField(null=False) # By default it is USD.
+   price = models.DecimalField(max_digits = 5, decimal_places= 2 ,null=False) # By default it is USD.
    creator_id = models.ForeignKey(User, on_delete=models.CASCADE) # Many to one Relationship.
-   cart_id = models.ManyToManyField(Cart) 
-   order_id = models.ManyToManyField(Orders) 
    createdAt = models.DateTimeField(auto_now_add=True)
    updateAt = models.DateTimeField(auto_now=True)
+class Cart(models.Model):
+   customer_id = models.OneToOneField(User, on_delete= models.CASCADE)
+   amount = models.DecimalField(max_digits = 5, decimal_places= 2, null= True)
+class CartItem(models.Model):
+   cart_id = models.ForeignKey(Cart, on_delete= models.CASCADE)
+   product_id = models.ManyToManyField(Products)
+   quantity = models.IntegerField(default=1)
+class Orders(models.Model):
+   customer_id = models.ForeignKey(User, on_delete= models.CASCADE) # Many to one relationship.
+   amount = models.DecimalField(max_digits = 5, decimal_places= 2, null= True)
 
    def __str__(self):
       return self.title
