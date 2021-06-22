@@ -1,16 +1,46 @@
 from django.db import models
 # Base Djando user model.
-from django.contrib.auth.models import AbstractBaseUser
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.db.models.fields.related import OneToOneField
 
 # Create your models here.
+class UserManager(BaseUserManager):
+
+   def create_user(self, email, name, lastname, is_seller,password = None):
+      
+      if not email:
+         raise ValueError('Please provide an email address')
+
+      email = self.normalize_email(email)
+
+      # Create a new user profile.
+      user = self.model(email = email, name = name, lastname = lastname, is_seller = is_seller)
+
+      # This will encrypt the password first and then assign it to the user.
+      user.set_password(password)
+
+      # Save user into database.
+      user.save(using = self._db)
+
+      return user
+
+   def create_superuser(self, email, name, lastname, password = None):
+
+      user = self.create_user(email, name, lastname, True, password)
+      user.is_superuser = True
+      user.is_staff = True
+
+      # Save user into database.
+      user.save(using = self._db)
+
+      return user
 class User(AbstractBaseUser):
    name = models.CharField(max_length=255, null=False)
    lastname = models.CharField(max_length=255, null=False)
    email = models.EmailField(max_length=255, unique=True, null=False)
    password = models.CharField(max_length=255)
    is_seller = models.BooleanField(default=False) # Default: Buyer.
-
+   objects = UserManager()
    USERNAME_FIELD = 'email'
    REQUIRED_FIELDS = ['name']
 

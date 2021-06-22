@@ -1,6 +1,6 @@
 from django.shortcuts import render
-from rest_framework.fields import SerializerMethodField
 from rest_framework.views import APIView
+from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.response import Response
 from . import serializers
 # Create your views here.
@@ -15,3 +15,7 @@ class UserView(APIView):
       if serializer.is_valid():
          serializer.save()
          return Response({'message': 'User created successfully', 'data':serializer.data})
+
+class Login(TokenObtainPairView):
+   
+   serializer_class = serializers.LoginSerialiazer
