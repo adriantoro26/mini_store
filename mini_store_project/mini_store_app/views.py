@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from rest_framework import status
+from rest_framework.serializers import Serializer
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.response import Response
@@ -26,7 +27,7 @@ class ProductView(APIView):
    def get(self, request):
       if not request.user.is_authenticated:
          return Response({'message':'Not authenticated'}, status=status.HTTP_404_NOT_FOUND)
-      products = models.Products.objects.all()
+      products = models.Product.objects.all()
       serializer = serializers.ProductSerializer(products, many=True)
       return Response({'products':serializer.data})
 
@@ -37,8 +38,36 @@ class ProductView(APIView):
 
       serializer = serializers.ProductSerializer(data=request.data)
       if serializer.is_valid():
-         serializer.save(creator_id=request.user)
+         serializer.save(creator=request.user)
          return Response({'post':serializer.data}, status=status.HTTP_201_CREATED)
       else:
          print('error', serializer.errors)
          return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class CartItemView(APIView):
+
+   def post(self, request):
+      if not request.user.is_authenticated:
+         return Response({'message':'Not authenticated'}, status=status.HTTP_404_NOT_FOUND) 
+
+      product_id = request.data['product_id']
+      if not product_id:
+         return Response({'message':'Not Found'}, status=status.HTTP_404_NOT_FOUND)
+      (cart, created) = models.Cart.objects.get_or_create(customer=request.user)
+
+      try:
+         product = models.Product.objects.get(pk=product_id)          
+      except:
+         return Response({'message':'Product Not Found'}, status=status.HTTP_404_NOT_FOUND)      
+
+      cart_item = models.CartItem.objects.filter(product=product, cart=cart)
+      if not cart_item:
+         cart_item = models.CartItem.objects.create(product=product, cart=cart)
+         serializer = serializers.CartItemSerializer(cart_item)
+         return Response({'cartItem': serializer.data})
+      
+      cart_item[0].quantity += 1
+      cart_item[0].save()
+      serializer = serializers.CartItemSerializer(cart_item[0])
+      return Response({'cartItem': serializer.data})
+

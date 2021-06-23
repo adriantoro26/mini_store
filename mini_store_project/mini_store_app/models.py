@@ -1,13 +1,14 @@
-import decimal
 from django.db import models
 # Base Djando user model.
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
-from django.db.models.fields.related import OneToOneField
+# Assings specific persmissions to users.
+from django.contrib.auth.models import PermissionsMixin
+
 
 # Create your models here.
 class UserManager(BaseUserManager):
 
-   def create_user(self, email, name, lastname, is_seller,password = None):
+   def create_user(self, email, name, password = None):
       
       if not email:
          raise ValueError('Please provide an email address')
@@ -15,7 +16,7 @@ class UserManager(BaseUserManager):
       email = self.normalize_email(email)
 
       # Create a new user profile.
-      user = self.model(email = email, name = name, lastname = lastname, is_seller = is_seller)
+      user = self.model(email = email, name = name)
 
       # This will encrypt the password first and then assign it to the user.
       user.set_password(password)
@@ -25,9 +26,9 @@ class UserManager(BaseUserManager):
 
       return user
 
-   def create_superuser(self, email, name, lastname, password = None):
+   def create_superuser(self, email, name, password = None):
 
-      user = self.create_user(email, name, lastname, True, password)
+      user = self.create_user(email, name, password)
       user.is_superuser = True
       user.is_staff = True
 
@@ -35,12 +36,13 @@ class UserManager(BaseUserManager):
       user.save(using = self._db)
 
       return user
-class User(AbstractBaseUser):
+class User(AbstractBaseUser, PermissionsMixin):
    name = models.CharField(max_length=255, null=False)
    lastname = models.CharField(max_length=255, null=False)
    email = models.EmailField(max_length=255, unique=True, null=False)
    password = models.CharField(max_length=255)
    is_seller = models.BooleanField(default=False) # Default: Buyer.
+   is_staff = models.BooleanField(default = False)
    objects = UserManager()
    USERNAME_FIELD = 'email'
    REQUIRED_FIELDS = ['name']
@@ -54,22 +56,22 @@ class User(AbstractBaseUser):
    def __str__(self):
       # Convert the object to a string.
       return self.email      
-class Products(models.Model):
+class Product(models.Model):
    title = models.CharField(max_length=20, null=False)
    description = models.TextField(null=False)
    price = models.DecimalField(max_digits = 5, decimal_places= 2 ,null=False) # By default it is USD.
-   creator_id = models.ForeignKey(User, on_delete=models.CASCADE) # Many to one Relationship.
+   creator = models.ForeignKey(User, on_delete=models.CASCADE) # Many to one Relationship.
    createdAt = models.DateTimeField(auto_now_add=True)
    updateAt = models.DateTimeField(auto_now=True)
 class Cart(models.Model):
-   customer_id = models.OneToOneField(User, on_delete= models.CASCADE)
+   customer = models.OneToOneField(User, on_delete= models.CASCADE)
    amount = models.DecimalField(max_digits = 5, decimal_places= 2, null= True)
 class CartItem(models.Model):
-   cart_id = models.ForeignKey(Cart, on_delete= models.CASCADE)
-   product_id = models.ManyToManyField(Products)
+   cart = models.ForeignKey(Cart, on_delete= models.CASCADE)
+   product = models.ForeignKey(Product, on_delete= models.CASCADE)
    quantity = models.IntegerField(default=1)
-class Orders(models.Model):
-   customer_id = models.ForeignKey(User, on_delete= models.CASCADE) # Many to one relationship.
+class Order(models.Model):
+   customer = models.ForeignKey(User, on_delete= models.CASCADE) # Many to one relationship.
    amount = models.DecimalField(max_digits = 5, decimal_places= 2, null= True)
 
    def __str__(self):

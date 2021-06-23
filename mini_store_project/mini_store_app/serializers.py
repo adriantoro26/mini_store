@@ -34,6 +34,16 @@ class LoginSerialiazer(TokenObtainPairSerializer):
       return token
 class ProductSerializer(serializers.ModelSerializer):
    class Meta:
-      model = models.Products
+      model = models.Product
       fields = '__all__'
-      extra_kwargs = {'creator_id':{'read_only':True}}
+      extra_kwargs = {'creator':{'read_only':True}}
+class CartItemSerializer(serializers.ModelSerializer):
+   class Meta:
+      model = models.CartItem
+      fields = '__all__'
+      extra_kwargs = {'product':{'read_only':True}, 'cart':{'read_only':True}}
+class CartSerializer(serializers.ModelSerializer):
+   class Meta:
+      model = models.Cart
+      fields = '__all__'
+      extra_kwargs = {'customer':{'read_only':True}}
