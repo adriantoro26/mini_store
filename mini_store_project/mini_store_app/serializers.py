@@ -42,8 +42,3 @@ class CartItemSerializer(serializers.ModelSerializer):
       model = models.CartItem
       fields = '__all__'
       extra_kwargs = {'product':{'read_only':True}, 'cart':{'read_only':True}}
-class CartSerializer(serializers.ModelSerializer):
-   class Meta:
-      model = models.Cart
-      fields = '__all__'
-      extra_kwargs = {'customer':{'read_only':True}}

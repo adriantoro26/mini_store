@@ -65,7 +65,6 @@ class Product(models.Model):
    updateAt = models.DateTimeField(auto_now=True)
 class Cart(models.Model):
    customer = models.OneToOneField(User, on_delete= models.CASCADE)
-   amount = models.DecimalField(max_digits = 5, decimal_places= 2, null= True)
 class CartItem(models.Model):
    cart = models.ForeignKey(Cart, on_delete= models.CASCADE)
    product = models.ForeignKey(Product, on_delete= models.CASCADE)
