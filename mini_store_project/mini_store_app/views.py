@@ -84,13 +84,34 @@ class CartView(APIView):
       serializer = serializers.CartItemSerializer(cart_item[0])        
 
       return Response({'cartItem': serializer.data})
-class OrderView(APIView):
    
+   def delete(self, request):
+      if not request.user.is_authenticated:
+         return Response({'message':'Not authenticated'}, status=status.HTTP_404_NOT_FOUND)
+      product_id = request.data['product_id']
+
+      try:
+         product = models.Product.objects.get(pk=product_id)
+      except:
+         return Response({'message':'Product not found'}, status.HTTP_404_NOT_FOUND)
+      try:
+         cart = models.Cart.objects.get(customer=request.user)
+      except:
+         return Response({'message':'Cart not found'}, status.HTTP_404_NOT_FOUND)
+      try:
+         cart_item = models.CartItem.objects.get(cart = cart, product=product)         
+      except:
+         return Response({'message':'Item not found in cart'}, status.HTTP_404_NOT_FOUND)  
+
+      cart_item.delete()
+      return Response({'message': 'Item removed from Cart successfully'})
+class OrderView(APIView):
+
    def get(self, request):
       if not request.user.is_authenticated:
          return Response({'message':'Not authenticated'}, status=status.HTTP_404_NOT_FOUND)
       
-      orders_list = models.Order.objects.filter(customer=request.user)
+      orders_list = models.Order.objects.filter(customer=request.user).order_by('-createdAt')
       orders = []      
       for order in orders_list:
          items = models.OrderItem.objects.filter(order=order)
@@ -98,7 +119,7 @@ class OrderView(APIView):
          for item in items:
             total += item.quantity*item.product.price            
          serializer = serializers.OrderItemSerializer(items, many=True)
-         orders.append({'id':order.id,'items':serializer.data, 'total':total})
+         orders.append({'id':order.id, 'createdAt':order.createdAt,'items':serializer.data, 'total':total})
       
       return Response({'orders':orders})
 
@@ -110,7 +131,11 @@ class OrderView(APIView):
       except:         
          return Response({'message':'Cart is empty'},status.HTTP_404_NOT_FOUND)      
       # Get cart items.
-      cart_items = models.CartItem.objects.filter(cart=cart)
+      cart_items = models.CartItem.objects.filter(cart=cart).order_by('-createdAt')
+
+      if not cart_items:
+         return Response({'message':'Cart is empty'},status.HTTP_404_NOT_FOUND)
+         
       # Create order.
       order = models.Order.objects.create(customer=request.user)
       # Create an order item for every cart item.
@@ -123,4 +148,4 @@ class OrderView(APIView):
       serializer = serializers.OrderItemSerializer(order_items, many = True)
 
       cart.delete()
-      return Response({'id':order.customer.id, 'items': serializer.data, 'total':total})
+      return Response({'id':order.id, 'items': serializer.data, 'total':total})

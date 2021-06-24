@@ -67,13 +67,18 @@ class Product(models.Model):
       return self.title
 class Cart(models.Model):
    customer = models.OneToOneField(User, on_delete= models.CASCADE)
+   createdAt = models.DateTimeField(auto_now_add=True)
+   updateAt = models.DateTimeField(auto_now=True)
 class CartItem(models.Model):
    cart = models.ForeignKey(Cart, on_delete= models.CASCADE)
    product = models.ForeignKey(Product, on_delete= models.CASCADE)
    quantity = models.IntegerField(default=1)
+   createdAt = models.DateTimeField(auto_now_add=True)
 class Order(models.Model):
    customer = models.ForeignKey(User, on_delete= models.CASCADE) # Many to one relationship.
+   createdAt = models.DateTimeField(auto_now_add=True)
+   updateAt = models.DateTimeField(auto_now=True)
 class OrderItem(models.Model):
    order = models.ForeignKey(Order, on_delete= models.CASCADE) # Many to one relationship.
    product = models.ForeignKey(Product, on_delete=models.CASCADE)
-   quantity = models.IntegerField(default=1)
+   quantity = models.IntegerField()
