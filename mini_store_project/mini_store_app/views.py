@@ -35,6 +35,9 @@ class ProductView(APIView):
       if not request.user.is_authenticated:
          return Response({'message':'Not authenticated'}, status=status.HTTP_404_NOT_FOUND)
 
+      if not request.user.is_seller:
+         return Response({'message':'Not a seller'}, status=status.HTTP_401_UNAUTHORIZED)
+
       serializer = serializers.ProductSerializer(data=request.data)
       if serializer.is_valid():
          serializer.save(creator=request.user)
@@ -107,6 +110,10 @@ class CartView(APIView):
    def get(self, request):
       if not request.user.is_authenticated:
          return Response({'message':'Not authenticated'}, status=status.HTTP_404_NOT_FOUND)       
+      
+      if request.user.is_seller:
+         return Response({'message':'Not a customer'}, status=status.HTTP_401_UNAUTHORIZED)
+      
       try:         
          cart = models.Cart.objects.get(customer=request.user)         
       except:
@@ -125,6 +132,9 @@ class CartView(APIView):
    def post(self, request):
       if not request.user.is_authenticated:
          return Response({'message':'Not authenticated'}, status=status.HTTP_404_NOT_FOUND) 
+
+      if request.user.is_seller:         
+         return Response({'message':'Not a customer'}, status=status.HTTP_401_UNAUTHORIZED)
 
       product_id = request.data['product_id']
       if not product_id:
@@ -148,6 +158,10 @@ class CartView(APIView):
    def delete(self, request):
       if not request.user.is_authenticated:
          return Response({'message':'Not authenticated'}, status=status.HTTP_404_NOT_FOUND)
+      
+      if request.user.is_seller:         
+         return Response({'message':'Not a customer'}, status=status.HTTP_401_UNAUTHORIZED)
+
       product_id = request.data['product_id']
 
       try:
@@ -171,6 +185,9 @@ class OrderView(APIView):
       if not request.user.is_authenticated:
          return Response({'message':'Not authenticated'}, status=status.HTTP_404_NOT_FOUND)
       
+      if request.user.is_seller:         
+         return Response({'message':'Not a customer'}, status=status.HTTP_401_UNAUTHORIZED)
+      
       orders_list = models.Order.objects.filter(customer=request.user).order_by('-createdAt')
       orders = []      
       for order in orders_list:
@@ -184,6 +201,13 @@ class OrderView(APIView):
       return Response({'orders':orders})
 
    def post(self, request):
+
+      if not request.user.is_authenticated:
+         return Response({'message':'Not authenticated'}, status=status.HTTP_404_NOT_FOUND)
+      
+      if request.user.is_seller:         
+         return Response({'message':'Not a customer'}, status=status.HTTP_401_UNAUTHORIZED)
+
       # Create an order based on current cart, then delete the cart.
       # Get user cart.
       try:
