@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'mini_store_app',
     'rest_framework',
     'rest_framework.authtoken',
+    'graphene_django',
 ]
 
 MIDDLEWARE = [
@@ -138,6 +139,10 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     )
+}
+
+GRAPHENE = {   
+    "SCHEMA": "mini_store_app.schema.schema"
 }
 
 SIMPLE_JWT = {
