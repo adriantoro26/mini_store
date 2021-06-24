@@ -42,6 +42,66 @@ class ProductView(APIView):
       else:
          print('error', serializer.errors)
          return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+class SingleProductView(APIView):
+   serializer_class = serializers.ProductSerializer
+
+   def get(self, request, pk):
+      if not request.user.is_authenticated:
+         return Response({'message':'Not authenticated'}, status=status.HTTP_404_NOT_FOUND)
+      try:
+         product = models.Product.objects.get(pk=pk)
+      except:
+         return Response({'message': 'Product not found'}, status.HTTP_404_NOT_FOUND)
+      serializer = serializers.ProductSerializer(product)
+      return Response({'product':serializer.data})
+
+   def put(self, request, pk):
+      if not request.user.is_authenticated:
+         return Response({'message':'Not authenticated'}, status=status.HTTP_404_NOT_FOUND)
+      try:
+         product = models.Product.objects.get(pk=pk)
+      except:
+         return Response({'message': 'Product not found'}, status.HTTP_404_NOT_FOUND)
+      
+      if not product.creator == request.user:
+         return Response({'message':'Not authorized'}, status=status.HTTP_401_UNAUTHORIZED)
+
+      serializer = serializers.ProductSerializer(product, data=request.data)
+      if serializer.is_valid():
+         serializer.save()
+         return Response({'product':serializer.data})
+      return Response(serializer.errors, status.HTTP_400_BAD_REQUEST)
+   
+   def patch(self, request, pk):
+      if not request.user.is_authenticated:
+         return Response({'message':'Not authenticated'}, status=status.HTTP_404_NOT_FOUND)
+      try:
+         product = models.Product.objects.get(pk=pk)
+      except:
+         return Response({'message': 'Product not found'}, status.HTTP_404_NOT_FOUND)
+      
+      if not product.creator == request.user:
+         return Response({'message':'Not authorized'}, status=status.HTTP_401_UNAUTHORIZED)
+
+      serializer = serializers.ProductSerializer(product, data=request.data, partial=True)
+      if serializer.is_valid():
+         serializer.save()
+         return Response({'product':serializer.data})
+      return Response(serializer.errors, status.HTTP_400_BAD_REQUEST)
+   
+   def delete(self, request, pk):
+      if not request.user.is_authenticated:
+         return Response({'message':'Not authenticated'}, status=status.HTTP_404_NOT_FOUND)
+      try:
+         product = models.Product.objects.get(pk=pk)
+      except:
+         return Response({'message': 'Product not found'}, status.HTTP_404_NOT_FOUND)
+      
+      if not product.creator == request.user:
+         return Response({'message':'Not authorized'}, status=status.HTTP_401_UNAUTHORIZED)
+
+      product.delete()
+      return Response({'message': 'Product removed successfully'})
 class CartView(APIView):
 
    def get(self, request):
@@ -135,7 +195,7 @@ class OrderView(APIView):
 
       if not cart_items:
          return Response({'message':'Cart is empty'},status.HTTP_404_NOT_FOUND)
-         
+
       # Create order.
       order = models.Order.objects.create(customer=request.user)
       # Create an order item for every cart item.
@@ -148,4 +208,4 @@ class OrderView(APIView):
       serializer = serializers.OrderItemSerializer(order_items, many = True)
 
       cart.delete()
-      return Response({'id':order.id, 'items': serializer.data, 'total':total})
+      return Response({'order': {'id':order.id, 'items': serializer.data, 'total':total}})
