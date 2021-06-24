@@ -46,21 +46,21 @@ class CartView(APIView):
 
    def get(self, request):
       if not request.user.is_authenticated:
-         return Response({'message':'Not authenticated'}, status=status.HTTP_404_NOT_FOUND) 
+         return Response({'message':'Not authenticated'}, status=status.HTTP_404_NOT_FOUND)       
+      try:         
+         cart = models.Cart.objects.get(customer=request.user)         
+      except:
+         return Response({'message':'Cart is empty'},status.HTTP_404_NOT_FOUND)      
+     
+      cart_items = models.CartItem.objects.filter(cart=cart)
+      serializer = serializers.CartItemSerializer(cart_items, many=True)
       
-      cart = models.Cart.objects.filter(customer=request.user)
-      if cart:
-         cart_items = models.CartItem.objects.filter(cart=cart[0])
-         serializer = serializers.CartItemSerializer(cart_items, many=True)
-         
-         total = 0
-         for item in cart_items:
-            # product = models.Product.objects.get(pk=item.product)
-            total += item.quantity*item.product.price
-         
-         return Response({'cart':serializer.data, 'total':total})
-
-      return Response({'message':'Cart is empty'})
+      total = 0
+      for item in cart_items:
+         # product = models.Product.objects.get(pk=item.product)
+         total += item.quantity*item.product.price
+      
+      return Response({'cart':{'id':cart.id,'items':serializer.data, 'total':total}})    
 
    def post(self, request):
       if not request.user.is_authenticated:
@@ -71,11 +71,11 @@ class CartView(APIView):
          return Response({'message':'Not Found'}, status=status.HTTP_404_NOT_FOUND)
 
       (cart, created) = models.Cart.objects.get_or_create(customer=request.user)
-
-      cart_item = models.CartItem.objects.filter(cart=cart, product=product_id)
+      product = models.Product.objects.get(pk=product_id)
+      cart_item = models.CartItem.objects.filter(cart=cart, product=product)
 
       if not cart_item:
-         cart_item = models.CartItem.objects.create(cart=cart, product=product_id)
+         cart_item = models.CartItem.objects.create(cart=cart, product=product)
          serializer = serializers.CartItemSerializer(cart_item)
          return Response({'cartItem': serializer.data})
       
@@ -84,4 +84,43 @@ class CartView(APIView):
       serializer = serializers.CartItemSerializer(cart_item[0])        
 
       return Response({'cartItem': serializer.data})
+class OrderView(APIView):
+   
+   def get(self, request):
+      if not request.user.is_authenticated:
+         return Response({'message':'Not authenticated'}, status=status.HTTP_404_NOT_FOUND)
+      
+      orders_list = models.Order.objects.filter(customer=request.user)
+      orders = []      
+      for order in orders_list:
+         items = models.OrderItem.objects.filter(order=order)
+         total = 0
+         for item in items:
+            total += item.quantity*item.product.price            
+         serializer = serializers.OrderItemSerializer(items, many=True)
+         orders.append({'id':order.id,'items':serializer.data, 'total':total})
+      
+      return Response({'orders':orders})
 
+   def post(self, request):
+      # Create an order based on current cart, then delete the cart.
+      # Get user cart.
+      try:
+         cart = models.Cart.objects.get(customer=request.user)        
+      except:         
+         return Response({'message':'Cart is empty'},status.HTTP_404_NOT_FOUND)      
+      # Get cart items.
+      cart_items = models.CartItem.objects.filter(cart=cart)
+      # Create order.
+      order = models.Order.objects.create(customer=request.user)
+      # Create an order item for every cart item.
+      order_items = []
+      total = 0
+      for item in cart_items:
+         order_item = models.OrderItem.objects.create(order=order, product=item.product, quantity = item.quantity)
+         order_items.append(order_item)
+         total += item.quantity*item.product.price
+      serializer = serializers.OrderItemSerializer(order_items, many = True)
+
+      cart.delete()
+      return Response({'id':order.customer.id, 'items': serializer.data, 'total':total})

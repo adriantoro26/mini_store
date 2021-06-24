@@ -7,5 +7,6 @@ urlpatterns = [
    path('auth/login', views.LoginView.as_view()),
    path('product', views.ProductView.as_view()),
    path('cart', views.CartView.as_view()),
+   path('order', views.OrderView.as_view()),
    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 ]
