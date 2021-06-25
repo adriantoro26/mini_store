@@ -34,7 +34,7 @@ class Query(graphene.ObjectType):
    def resolve_all_products(self, info):
       if not info.context.user.is_authenticated:
          raise graphql.GraphQLError('User not authenticated')  
-      return models.Product.objects.all()
+      return models.Product.objects.all().order_by('-createdAt')
 
    def resolve_product(self, info, product_id):
       if not info.context.user.is_authenticated:
@@ -44,16 +44,35 @@ class Query(graphene.ObjectType):
    def resolve_all_orders(self, info):
       if not info.context.user.is_authenticated:
          raise graphql.GraphQLError('User not authenticated') 
-      return models.Order.objects.filter(customer=info.context.user)
+      return models.Order.objects.filter(customer=info.context.user).order_by('-createdAt')
 class ObtainJSONWebToken(graphql_jwt.JSONWebTokenMutation):
     user = graphene.Field(UserType)
 
     @classmethod
     def resolve(cls, root, info, **kwargs):
         return cls(user=info.context.user)
+
+class ProductInput(graphene.InputObjectType):
+   title = graphene.String(required=True)
+   description = graphene.String(required=True)
+   price = graphene.Decimal(max_digits = 5, decimal_places= 2, required=True)
+class AddProduct(graphene.Mutation):
+   class Arguments:
+      product_input = ProductInput(required=True)
+
+   product = graphene.Field(ProductType)
+
+   @staticmethod
+   def mutate(root, info, product_input=None):
+      print(product_input.title)
+      product = models.Product.objects.create(title=product_input.title, description=product_input.description, price=product_input.price, creator=info.context.user)  
+      return AddProduct(product=product)
+
 class Mutation(graphene.ObjectType):
    login = ObtainJSONWebToken.Field()
    verify_token = graphql_jwt.Verify.Field()
    refresh_token = graphql_jwt.Refresh.Field()
+   add_product = AddProduct.Field()
+   
 
 schema = graphene.Schema(query=Query, mutation=Mutation)
