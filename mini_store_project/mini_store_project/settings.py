@@ -142,9 +142,23 @@ REST_FRAMEWORK = {
 }
 
 GRAPHENE = {   
-    "SCHEMA": "mini_store_app.schema.schema"
+    "SCHEMA": "mini_store_app.schema.schema",
+    'MIDDLEWARE': [
+        'graphql_jwt.middleware.JSONWebTokenMiddleware',
+    ],
 }
+
+AUTHENTICATION_BACKENDS = [
+    'graphql_jwt.backends.JSONWebTokenBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30), 
+}
+
+GRAPHQL_JWT = {
+    'JWT_VERIFY_EXPIRATION': True,
+    'JWT_EXPIRATION_DELTA': timedelta(minutes=30),
+    'JWT_AUTH_HEADER_PREFIX':'Bearer',
 }
