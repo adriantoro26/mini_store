@@ -115,11 +115,11 @@ class CartView(APIView):
          return Response({'message':'Not a customer'}, status=status.HTTP_401_UNAUTHORIZED)
       
       try:         
-         cart = models.Cart.objects.get(customer=request.user)         
+         cart = request.user.cart        
       except:
-         return Response({'message':'Cart is empty'},status.HTTP_404_NOT_FOUND)      
+         return Response({'message':'Cart not found'},status.HTTP_404_NOT_FOUND)     
      
-      cart_items = models.CartItem.objects.filter(cart=cart)
+      cart_items = cart.cartitem_set.all() # Relational Manager queryset
       serializer = serializers.CartItemSerializer(cart_items, many=True)
       
       total = 0
@@ -140,20 +140,25 @@ class CartView(APIView):
       if not product_id:
          return Response({'message':'Not Found'}, status=status.HTTP_404_NOT_FOUND)
 
-      (cart, created) = models.Cart.objects.get_or_create(customer=request.user)
-      product = models.Product.objects.get(pk=product_id)
-      cart_item = models.CartItem.objects.filter(cart=cart, product=product)
-
-      if not cart_item:
-         cart_item = models.CartItem.objects.create(cart=cart, product=product)
+      # (cart, created) = models.Cart.objects.get_or_create(customer=request.user)
+      if not hasattr(request.user, 'cart'):
+         cart = models.Cart.objects.create(customer = request.user)
+      else:
+         cart = request.user.cart
+      try:
+         product = models.Product.objects.get(pk=product_id)
+      except:
+         return Response({'message': 'Product not found'}, status.HTTP_404_NOT_FOUND)
+      try:
+         cart_item = cart.cartitem_set.get(product=product)
+         cart_item.quantity += 1
+         cart_item.save()
          serializer = serializers.CartItemSerializer(cart_item)
          return Response({'cartItem': serializer.data})
-      
-      cart_item[0].quantity += 1
-      cart_item[0].save()
-      serializer = serializers.CartItemSerializer(cart_item[0])        
-
-      return Response({'cartItem': serializer.data})
+      except:  
+         cart_item = cart.cartitem_set.create(product=product)
+         serializer = serializers.CartItemSerializer(cart_item)
+         return Response({'cartItem': serializer.data})
    
    def delete(self, request):
       if not request.user.is_authenticated:
@@ -169,11 +174,11 @@ class CartView(APIView):
       except:
          return Response({'message':'Product not found'}, status.HTTP_404_NOT_FOUND)
       try:
-         cart = models.Cart.objects.get(customer=request.user)
+         cart = request.user.cart
       except:
          return Response({'message':'Cart not found'}, status.HTTP_404_NOT_FOUND)
       try:
-         cart_item = models.CartItem.objects.get(cart = cart, product=product)         
+         cart_item = cart.cartitem_set.get(product=product)         
       except:
          return Response({'message':'Item not found in cart'}, status.HTTP_404_NOT_FOUND)  
 
@@ -188,10 +193,12 @@ class OrderView(APIView):
       if request.user.is_seller:         
          return Response({'message':'Not a customer'}, status=status.HTTP_401_UNAUTHORIZED)
       
-      orders_list = models.Order.objects.filter(customer=request.user).order_by('-createdAt')
+      # orders_list = models.Order.objects.filter(customer=request.user).order_by('-createdAt')
+      orders_list = request.user.order_set.all().order_by('-createdAt')
       orders = []      
-      for order in orders_list:
-         items = models.OrderItem.objects.filter(order=order)
+      for order in orders_list:         
+         # items = models.OrderItem.objects.filter(order=order)
+         items = order.orderitem_set.all() # Relational Manager queryset
          total = 0
          for item in items:
             total += item.quantity*item.product.price            
@@ -210,25 +217,22 @@ class OrderView(APIView):
 
       # Create an order based on current cart, then delete the cart.
       # Get user cart.
-      try:
-         cart = models.Cart.objects.get(customer=request.user)        
-      except:         
-         return Response({'message':'Cart is empty'},status.HTTP_404_NOT_FOUND)      
-      # Get cart items.
-      cart_items = models.CartItem.objects.filter(cart=cart).order_by('-createdAt')
 
-      if not cart_items:
+      if not hasattr(request.user, 'cart') or not request.user.cart.cartitem_set.all():
          return Response({'message':'Cart is empty'},status.HTTP_404_NOT_FOUND)
+    
+      cart = request.user.cart
+
+      # Get cart items.
+      cart_items = cart.cartitem_set.all().order_by('-createdAt')
 
       # Create order.
-      order = models.Order.objects.create(customer=request.user)
-      # Create an order item for every cart item.
-      order_items = []
+      order = request.user.order_set.create()
       total = 0
       for item in cart_items:
-         order_item = models.OrderItem.objects.create(order=order, product=item.product, quantity = item.quantity)
-         order_items.append(order_item)
+         order.orderitem_set.create(product=item.product, quantity = item.quantity)
          total += item.quantity*item.product.price
+      order_items = order.orderitem_set.all()
       serializer = serializers.OrderItemSerializer(order_items, many = True)
 
       cart.delete()
