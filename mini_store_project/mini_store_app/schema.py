@@ -38,6 +38,10 @@ class Query(graphene.ObjectType):
    def resolve_all_orders(self, info):
       if not info.context.user.is_authenticated:
          raise graphql.GraphQLError('User not authenticated') 
+
+      if info.context.user.is_seller:
+         raise graphql.GraphQLError('Not a customer')
+
       return models.Order.objects.filter(customer=info.context.user).order_by('-createdAt')
 class ObtainJSONWebToken(graphql_jwt.JSONWebTokenMutation):
     user = graphene.Field(UserType)
@@ -63,6 +67,12 @@ class AddProduct(graphene.Mutation):
 
    @staticmethod
    def mutate(root, info, product_input=None):
+      if not info.context.user.is_authenticated:
+         raise graphql.GraphQLError('User not authenticated')
+
+      if not info.context.user.is_seller:
+         raise graphql.GraphQLError('Not a seller')
+
       product = models.Product.objects.create(title=product_input.title, description=product_input.description, price=product_input.price, creator=info.context.user)  
       return AddProduct(product=product)
 class UpdateProduct(graphene.Mutation):
@@ -74,11 +84,18 @@ class UpdateProduct(graphene.Mutation):
 
    @staticmethod
    def mutate(root, info, product_id=None, product_input=None):
+      if not info.context.user.is_authenticated:
+         raise graphql.GraphQLError('User not authenticated')
+      if not info.context.user.is_seller:
+         raise graphql.GraphQLError('Not a seller')
       try:
          product = models.Product.objects.get(pk=product_id)
       except:
          return graphql.GraphQLError('Product not found')
-      
+
+      if not product.creator == info.context.user:
+         raise graphql.GraphQLError('User not authorized')
+
       if product_input.title:
          product.title = product_input.title
       if product_input.description:
@@ -94,10 +111,18 @@ class DeleteProduct(graphene.Mutation):
    message = graphene.String()
    @staticmethod
    def mutate(root, info, product_id=None):
+      if not info.context.user.is_authenticated:
+         raise graphql.GraphQLError('User not authenticated')
+      if not info.context.user.is_seller:
+         raise graphql.GraphQLError('Not a seller')
+         
       try:
          product = models.Product.objects.get(pk=product_id)
       except:
          return graphql.GraphQLError('Product not found')
+
+      if not product.creator == info.context.user:
+         raise graphql.GraphQLError('User not authorized')
 
       product.delete()
 
